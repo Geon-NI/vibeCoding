@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오늘의 할 일</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #20312d;
+      --muted: #788680;
+      --paper: #f6f7f1;
+      --surface: #fffefa;
+      --line: #e5e9df;
+      --green: #31745b;
+      --green-dark: #245c47;
+      --coral: #c66a56;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 56px 20px;
+      background-color: var(--paper);
+      background-image: radial-gradient(#dce4d8 0.75px, transparent 0.75px);
+      background-size: 18px 18px;
+      color: var(--ink);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    main {
+      width: min(100%, 560px);
+      margin: 0 auto;
+      padding: 38px 40px 30px;
+      border: 1px solid #e9ece4;
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 16px 48px rgb(39 58 48 / 8%);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 9px 0 28px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    form {
+      display: flex;
+      gap: 9px;
+    }
+
+    input[type="text"] {
+      min-width: 0;
+      flex: 1;
+      height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+    }
+
+    input[type="text"]::placeholder { color: #a0aaa4; }
+
+    input[type="text"]:focus {
+      border-color: var(--green);
+      outline: 3px solid rgb(49 116 91 / 13%);
+    }
+
+    button {
+      border: 0;
+      border-radius: 5px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .add-button {
+      flex: 0 0 auto;
+      padding: 0 18px;
+      background: var(--green);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .add-button:hover { background: var(--green-dark); }
+
+    .list-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 27px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .list-heading strong {
+      color: var(--green);
+      font-size: 12px;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 54px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    li:first-child { border-top: 1px solid var(--line); }
+
+    li input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      flex: 0 0 auto;
+      margin: 0;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    .task-text {
+      flex: 1;
+      overflow-wrap: anywhere;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    li.completed .task-text {
+      color: #9aa39d;
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+
+    .delete-button {
+      padding: 7px 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .delete-button:hover {
+      background: #fbefec;
+      color: var(--coral);
+    }
+
+    .empty-state {
+      padding: 25px 0;
+      color: #9aa39d;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 24px 14px; }
+      main { padding: 28px 20px 22px; }
+      h1 { font-size: 26px; }
+      .add-button { padding: 0 13px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">MY DAILY LIST</p>
+    <h1>오늘의 할 일</h1>
+    <p class="subtitle">작은 일부터 하나씩 끝내봐요.</p>
+
+    <form id="todo-form">
+      <input id="todo-input" type="text" placeholder="할 일을 입력하세요" aria-label="할 일 입력" autocomplete="off" required>
+      <button class="add-button" type="submit">추가</button>
+    </form>
+
+    <div class="list-heading">
+      <span>할 일 목록</span>
+      <strong id="task-count">0개 남음</strong>
+    </div>
+    <ul id="todo-list" aria-live="polite"></ul>
+  </main>
+
+  <script>
+    const form = document.querySelector("#todo-form");
+    const input = document.querySelector("#todo-input");
+    const list = document.querySelector("#todo-list");
+    const taskCount = document.querySelector("#task-count");
+
+    function updateTaskCount() {
+      const remaining = list.querySelectorAll("li:not(.completed)").length;
+      taskCount.textContent = `${remaining}개 남음`;
+    }
+
+    function addTask(text) {
+      const item = document.createElement("li");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.setAttribute("aria-label", `${text} 완료`);
+
+      const label = document.createElement("span");
+      label.className = "task-text";
+      label.textContent = text;
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "delete-button";
+      deleteButton.type = "button";
+      deleteButton.textContent = "삭제";
+      deleteButton.setAttribute("aria-label", `${text} 삭제`);
+
+      checkbox.addEventListener("change", () => {
+        item.classList.toggle("completed", checkbox.checked);
+        updateTaskCount();
+      });
+
+      deleteButton.addEventListener("click", () => {
+        item.remove();
+        updateTaskCount();
+      });
+
+      item.append(checkbox, label, deleteButton);
+      list.append(item);
+      updateTaskCount();
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      addTask(text);
+      input.value = "";
+      input.focus();
+    });
+  </script>
+</body>
+</html>
